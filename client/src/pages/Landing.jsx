@@ -5,6 +5,7 @@ export default function Landing({ onShowLogin }) {
   const [scrollY, setScrollY] = useState(0);
 
   const revealRefs = useRef([]);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -27,6 +28,172 @@ export default function Landing({ onShowLogin }) {
     return () => {
       window.removeEventListener('scroll', handleScroll);
       observer.disconnect();
+    };
+  }, []);
+
+  // ── Constellation Canvas ──
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let animationId;
+    let mouse = { x: null, y: null };
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const onMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    };
+    const onMouseLeave = () => { mouse.x = null; mouse.y = null; };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseleave', onMouseLeave);
+
+    const isMobile = window.innerWidth < 768;
+    const PARTICLE_COUNT = isMobile ? 60 : 120;
+    const MAX_DIST = isMobile ? 90 : 130;
+    const MOUSE_DIST = 180;
+    const particles = [];
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.3;
+        this.vy = (Math.random() - 0.5) * 0.3;
+        this.phase = Math.random() * Math.PI * 2;
+        this.waveSpeed = 0.008 + Math.random() * 0.006;
+        this.waveAmplitude = 0.4 + Math.random() * 0.3;
+        this.baseSize = 0.8 + Math.random() * 1.8;
+        this.size = this.baseSize;
+        this.baseOpacity = 0.3 + Math.random() * 0.5;
+        this.opacity = this.baseOpacity;
+        this.opacityPhase = Math.random() * Math.PI * 2;
+        this.opacitySpeed = 0.01 + Math.random() * 0.015;
+        this.isStar = Math.random() < 0.15;
+        if (this.isStar) {
+          this.baseSize = 1.5 + Math.random() * 2;
+          this.baseOpacity = 0.7 + Math.random() * 0.3;
+        }
+      }
+      update(time) {
+        this.vx += Math.sin(time * this.waveSpeed + this.phase) * this.waveAmplitude * 0.01;
+        this.vy += Math.cos(time * this.waveSpeed + this.phase) * this.waveAmplitude * 0.01;
+        this.vx *= 0.99;
+        this.vy *= 0.99;
+        if (mouse.x !== null) {
+          const dx = this.x - mouse.x;
+          const dy = this.y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const repelRadius = 120;
+          if (dist < repelRadius && dist > 0) {
+            const force = (repelRadius - dist) / repelRadius;
+            this.vx += (dx / dist) * force * 0.8;
+            this.vy += (dy / dist) * force * 0.8;
+          }
+        }
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < -10) this.x = canvas.width + 10;
+        if (this.x > canvas.width + 10) this.x = -10;
+        if (this.y < -10) this.y = canvas.height + 10;
+        if (this.y > canvas.height + 10) this.y = -10;
+        this.opacity = this.baseOpacity + Math.sin(time * this.opacitySpeed + this.opacityPhase) * 0.2;
+        if (this.isStar) {
+          this.size = this.baseSize + Math.sin(time * this.opacitySpeed * 0.7) * 0.5;
+        }
+      }
+      draw() {
+        ctx.save();
+        if (this.isStar) { ctx.shadowBlur = 12; ctx.shadowColor = 'rgba(255, 255, 255, 0.8)'; }
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+    let time = 0;
+    const animate = () => {
+      animationId = requestAnimationFrame(animate);
+      time++;
+      ctx.fillStyle = 'rgba(4, 6, 8, 0.15)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MAX_DIST) {
+            const opacity = (1 - dist / MAX_DIST) * 0.25;
+            const gradient = ctx.createLinearGradient(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+            gradient.addColorStop(0, `rgba(180, 210, 255, ${opacity})`);
+            gradient.addColorStop(0.5, `rgba(255, 255, 255, ${opacity * 1.5})`);
+            gradient.addColorStop(1, `rgba(180, 210, 255, ${opacity})`);
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+        if (mouse.x !== null) {
+          const dx = particles[i].x - mouse.x;
+          const dy = particles[i].y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MOUSE_DIST) {
+            const opacity = (1 - dist / MOUSE_DIST) * 0.5;
+            const gradient = ctx.createLinearGradient(particles[i].x, particles[i].y, mouse.x, mouse.y);
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${opacity})`);
+            gradient.addColorStop(1, `rgba(96, 165, 250, ${opacity * 0.3})`);
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.strokeStyle = gradient;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      particles.forEach(p => { p.update(time); p.draw(); });
+
+      const beamX = canvas.width * 0.7 + Math.sin(time * 0.003) * canvas.width * 0.15;
+      const beamY = canvas.height * 0.2 + Math.cos(time * 0.002) * canvas.height * 0.1;
+      const beam = ctx.createRadialGradient(beamX, beamY, 0, beamX, beamY, canvas.width * 0.4);
+      beam.addColorStop(0, 'rgba(59, 130, 246, 0.06)');
+      beam.addColorStop(0.4, 'rgba(59, 130, 246, 0.02)');
+      beam.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = beam;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const beam2X = canvas.width * 0.3 + Math.cos(time * 0.0025) * canvas.width * 0.1;
+      const beam2Y = canvas.height * 0.6 + Math.sin(time * 0.003) * canvas.height * 0.1;
+      const beam2 = ctx.createRadialGradient(beam2X, beam2Y, 0, beam2X, beam2Y, canvas.width * 0.3);
+      beam2.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+      beam2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = beam2;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+
+    animate();
+    return () => {
+      cancelAnimationFrame(animationId);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseleave', onMouseLeave);
     };
   }, []);
 
@@ -84,31 +251,11 @@ export default function Landing({ onShowLogin }) {
 
       {/* HERO SECTION */}
       <section className="relative min-h-screen flex items-center pt-24 overflow-hidden">
-         {/* Background Elements */}
-         <div className="absolute inset-0 z-0">
-            {/* Radial Glow */}
-            <div className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/3 w-[800px] h-[800px] bg-blue-900/20 rounded-full blur-[120px] pointer-events-none"></div>
-            {/* Grid */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-            
-            {/* CSS Particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(15)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="absolute rounded-full bg-blue-400/30 animate-float"
-                  style={{
-                    width: Math.random() * 2 + 2 + 'px',
-                    height: Math.random() * 2 + 2 + 'px',
-                    left: Math.random() * 100 + '%',
-                    top: Math.random() * 100 + '%',
-                    animationDuration: Math.random() * 10 + 15 + 's',
-                    animationDelay: Math.random() * 5 + 's'
-                  }}
-                />
-              ))}
-            </div>
-         </div>
+         {/* Constellation Canvas Background */}
+         <canvas
+           ref={canvasRef}
+           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 0, opacity: 0.6 }}
+         />
 
          <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full relative z-10 flex flex-col lg:flex-row items-center gap-16">
             
