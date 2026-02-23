@@ -1,0 +1,98 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Customer {
+  id                      String        @id @default(cuid())
+  name                    String
+  phone                   String
+  email                   String
+  churnScore              Int           @default(0) // range 1-10
+  purchaseLikelihoodScore Int           @default(0) // range 0-100
+  totalLifetimeSpend      Float         @default(0)
+  lastServiceDate         DateTime?
+  lastPurchaseDate        DateTime?
+  serviceAdvisor          String?
+  tradeValueEstimate      Float?
+  status                  String        @default("active") // active | at-risk | drifted | recovered
+  createdAt               DateTime      @default(now())
+  
+  vehicles                Vehicle[]
+  serviceJobs             ServiceJob[]
+  outreachLogs            OutreachLog[]
+}
+
+model Vehicle {
+  id                    String       @id @default(cuid())
+  customerId            String
+  vin                   String?
+  make                  String
+  model                 String
+  trim                  String?
+  color                 String?
+  licensePlate          String?
+  year                  Int
+  mileage               Int          @default(0)
+  purchaseDate          DateTime?
+  estimatedTradeValue   Float?
+  estimatedPrivateValue Float?
+  lastValuationDate     DateTime?
+
+  customer              Customer     @relation(fields: [customerId], references: [id])
+  recalls               Recall[]
+  serviceJobs           ServiceJob[]
+}
+
+model Recall {
+  id          String   @id @default(cuid())
+  vehicleId   String
+  recallId    String // NHTSA Campaign Number
+  component   String
+  summary     String
+  consequence String?
+  severity    String   @default("medium") // low | medium | high | critical
+  status      String   @default("pending") // pending | notified | scheduled | completed
+  detectedAt  DateTime @default(now())
+  notifiedAt  DateTime?
+
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+}
+
+model ServiceJob {
+  id                  String   @id @default(cuid())
+  customerId          String
+  vehicleId           String
+  serviceDate         DateTime @default(now())
+  serviceType         String
+  complaints          String?
+  laborCost           Float    @default(0)
+  partsCost           Float    @default(0)
+  totalCost           Float    @default(0)
+  advisor             String?
+  upsellOpportunities String? // stored as JSON string
+  followUpSent        Boolean  @default(false)
+  followUpDate        DateTime?
+  satisfactionRating  Int?
+  nextServiceDate     DateTime?
+
+  customer            Customer @relation(fields: [customerId], references: [id])
+  vehicle             Vehicle  @relation(fields: [vehicleId], references: [id])
+}
+
+model OutreachLog {
+  id         String   @id @default(cuid())
+  customerId String
+  type       String // servicepulse | recallreach | tradeiq
+  channel    String // sms | email
+  message    String
+  status     String   @default("sent") // sent | delivered | replied | failed
+  twilioSid  String?
+  sentAt     DateTime @default(now())
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+}
