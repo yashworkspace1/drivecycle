@@ -93,6 +93,66 @@ I built three connected engines: **ServicePulse** for retention, **RecallReach**
 - Messages leads with **actual dollar range** upfront (`$X,XXX – $X,XXX`) — transparency is intentional
 
 ---
+Look at what these three cover together:
+
+CUSTOMER BUYS CAR
+       │
+       ▼
+┌─────────────────┐
+│  SERVICE PULSE  │  ← Post-purchase retention
+│                 │    Stop them drifting to local mechanics
+│  Months 1-36   │    Oil changes, follow-ups, upsells
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  RECALL REACH   │  ← Government recall triggers re-engagement
+│                 │    NHTSA API pulls live recalls
+│  Year 3-6      │    Positions dealer as hero who told them first
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   TRADE IQ      │  ← Purchase likelihood peaks here
+│                 │    Transparent market valuation
+│  Year 5-8      │    Convert service/recall visit → new car sale
+└─────────────────┘
+         │
+         ▼
+  CUSTOMER BUYS
+  AGAIN FROM YOU
+(not a competitor)
+
+---
+
+How The Three Engines Talk To Each Other
+This is what makes DriveCycle genuinely new — the data flows between engines, each one making the others smarter:
+
+SERVICE HISTORY DATA (ServicePulse)
+           │
+           ├──→ Feeds vehicle age/mileage/repair cost to TradeIQ
+           │    (purchase likelihood scoring gets smarter)
+           │
+           ├──→ Feeds vehicle VIN/details to RecallReach
+           │    (recall matching against YOUR customer base)
+           │
+           └──→ Identifies drifted customers for RecallReach
+                (lost customers recovered through recall re-entry)
+
+RECALL DATA (RecallReach)
+           │
+           ├──→ Re-entered customers flow into ServicePulse
+           │    (relationship rebuilt, now retained)
+           │
+           └──→ Recall visit = purchase signal trigger for TradeIQ
+                (high-mileage car + recall = they're shopping)
+
+PURCHASE SIGNALS (TradeIQ)
+           │
+           └──→ Converted customers restart the ServicePulse loop
+                (new car purchased = Day 1 of retention begins again)
+                
+---
 
 ## 🔄 How The Data Flows Between Engines
 
@@ -124,7 +184,7 @@ New vehicle purchased → new service history begins
     ServicePulse retention cycle restarts
 ```
 
-> This is the flywheel. Every action creates the next opportunity automatically.
+> This is the flywheel. Every action automatically creates the next opportunity.
 
 ---
 
@@ -180,7 +240,7 @@ This was the most important decision in the whole project. Free, no auth, real g
 Schema defined once. Ran `npx prisma db push` to deploy to Supabase PostgreSQL with one environment variable change. Zero code changes between local dev and production database.
 
 **No paid APIs:**
-Entire project runs at **$0 cost**. Supabase free tier (500MB), Gemini free tier, NHTSA free, Twilio $15 trial credit, Vercel free, Render free tier.
+The entire project runs at **$0 cost**. Supabase free tier (500MB), Gemini free tier, NHTSA free, Twilio $15 trial credit, Vercel free, Render free tier.
 
 ---
 
