@@ -95,12 +95,13 @@ I built three connected engines: **ServicePulse** for retention, **RecallReach**
 ---
 Look at what these three cover together:
 
+```
 CUSTOMER BUYS CAR
        │
        ▼
 ┌─────────────────┐
 │  SERVICE PULSE  │  ← Post-purchase retention
-│                 │    Stop them drifting to local mechanics
+│                 │    Stop them from drifting to local mechanics
 │  Months 1-36   │    Oil changes, follow-ups, upsells
 └────────┬────────┘
          │
@@ -122,12 +123,13 @@ CUSTOMER BUYS CAR
   CUSTOMER BUYS
   AGAIN FROM YOU
 (not a competitor)
+```
 
 ---
 
 How The Three Engines Talk To Each Other
 This is what makes DriveCycle genuinely new — the data flows between engines, each one making the others smarter:
-
+```
 SERVICE HISTORY DATA (ServicePulse)
            │
            ├──→ Feeds vehicle age/mileage/repair cost to TradeIQ
@@ -151,7 +153,7 @@ PURCHASE SIGNALS (TradeIQ)
            │
            └──→ Converted customers restart the ServicePulse loop
                 (new car purchased = Day 1 of retention begins again)
-                
+```         
 ---
 
 ## 🔄 How The Data Flows Between Engines
